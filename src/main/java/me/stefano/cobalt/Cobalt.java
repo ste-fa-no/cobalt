@@ -9,6 +9,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * The {@code Cobalt} class represents a command handling framework for a command-line application.
+ * It provides functionality for registering commands, executing commands, and managing parameter adapters.
+ */
 public class Cobalt {
 
     private static Cobalt instance = null;
@@ -16,6 +20,10 @@ public class Cobalt {
     private final Map<String, Object> commandMap;
     private final Map<Class<?>, ParameterAdapter<?>> adapterMap;
 
+    /**
+     * Constructs a new instance of the {@code Cobalt} class.
+     * Initializes the command map and adapter map with default adapters for common types.
+     */
     private Cobalt() {
         this.commandMap = new HashMap<>();
         this.adapterMap = new HashMap<>();
@@ -28,6 +36,11 @@ public class Cobalt {
         this.registerAdapter(String.class, new StringAdapter());
     }
 
+    /**
+     * Gets the singleton instance of the {@code Cobalt} class.
+     *
+     * @return the singleton instance of the {@code Cobalt} class
+     */
     public static Cobalt get() {
         if (instance == null) instance = new Cobalt();
         return instance;
