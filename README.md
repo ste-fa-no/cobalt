@@ -72,6 +72,7 @@ Commands can be executed using the ```dispatch()``` method.
 
 ```java
 public class Main {
+
     public static void main(String[] args) {
         Cobalt.get().registerCommand(new SumCommand());
 
