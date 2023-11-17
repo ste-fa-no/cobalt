@@ -1,13 +1,18 @@
 package me.stefano.cobalt;
 
+import me.stefano.cobalt.adapter.exception.ParameterAdapterNotFoundException;
 import me.stefano.cobalt.adapter.impl.*;
 import me.stefano.cobalt.command.Command;
 import me.stefano.cobalt.command.CommandExecutor;
 import me.stefano.cobalt.adapter.ParameterAdapter;
+import me.stefano.cobalt.command.exception.NoMatchingExecutorException;
+import me.stefano.cobalt.command.exception.UnknownCommandException;
+import me.stefano.cobalt.command.exception.UnspecifiedCommandException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * The {@code Cobalt} class represents a command handling framework for a command-line application.
@@ -100,16 +105,24 @@ public class Cobalt {
     }
 
     /**
-     * Executes the specified command using the registered command executors.
+     * The `dispatch` method is responsible for executing a specified command by identifying the appropriate command executor and invoking the corresponding method.
+     * This method handles command parsing, executor selection, and parameter adaptation.
      *
-     * @param command The command to be executed, including the command name and any parameters.
-     *                Must not be null or empty.
+     * @param command The command to be executed.
+     *
+     * @throws UnspecifiedCommandException If the provided command is null or empty.
+     * @throws UnknownCommandException If the specified command is not registered.
+     * @throws NoMatchingExecutorException If no executor method with the correct parameter count is found.
+     * @throws ParameterAdapterNotFoundException If no parameter adapter is found for a specific parameter type.
+     * @throws ExecutionException If an exception occurs during the execution of a command.
+     * @throws InterruptedException If the execution of a command is interrupted.
      */
-    public void dispatch(String command) {
+    public void dispatch(String command) throws UnspecifiedCommandException, UnknownCommandException, NoMatchingExecutorException, ParameterAdapterNotFoundException, ExecutionException, InterruptedException {
+
         if (command == null || command.isEmpty()) {
-            System.err.println("An syntax error has occurred trying to execute command.");
-            System.err.println("You must specify a command to be executed!");
-            return;
+            throw new UnspecifiedCommandException("""
+                    A syntax error has occurred trying to execute command.
+                    Please specify a command to execute!""");
         }
 
         var splitCommand = new ArrayList<>(List.of(command.split(" ")));
@@ -117,9 +130,9 @@ public class Cobalt {
         splitCommand.remove(0);
 
         if (!this.commandMap.containsKey(commandName)) {
-            System.err.println("An syntax error has occurred trying to execute command " + commandName + ".");
-            System.err.println("No command with name " + commandName + " has ever been registered.");
-            return;
+            throw new UnknownCommandException(String.format("""
+                    A syntax error has occurred trying to execute command %s.
+                    No command with name %s has ever been registered.""", commandName, commandName));
         }
         var commandParameterCount = splitCommand.size();
 
@@ -129,10 +142,11 @@ public class Cobalt {
 
         var availableExecutors = executorMethods.filter(method -> method.getParameterCount() == commandParameterCount);
         var executorList = availableExecutors.toList();
+
         if (executorList.isEmpty()) {
-            System.err.println("An syntax error has occurred trying to execute command " + commandName + ".");
-            System.err.println("No executor method with " + commandParameterCount + " parameters found for command " + commandName + ".");
-            return;
+            throw new NoMatchingExecutorException(String.format("""
+                    A syntax error has occurred trying to execute command %s.
+                    No executor method with %d parameters found for command %s.""", commandName, commandParameterCount, commandName));
         }
 
         for (var executor : executorList) {
@@ -142,13 +156,14 @@ public class Cobalt {
 
             for (var parameter : parameterList) {
                 var parameterType = parameter.getType();
+                var typeName = parameterType.getName();
                 var parameterAdapter = this.adapterMap.get(parameterType);
 
                 if (parameterAdapter == null) {
-                    System.err.println("An internal error has occurred trying to execute command " + commandName + ".");
-                    System.err.println("No parameter adapter found for type " + parameterType.getName() + ".");
-                    System.err.println("See the documentation for further information on how to create parameter type adapters.");
-                    return;
+                    throw new ParameterAdapterNotFoundException(String.format("""
+                            An internal error has occurred trying to execute command %s.
+                            No parameter adapter found for type %s.
+                            See the documentation for further information on how to create parameter type adapters.""", commandName, typeName));
                 }
 
                 var parameterIndex = parameterList.indexOf(parameter);
@@ -171,9 +186,10 @@ public class Cobalt {
                 try {
                     executor.invoke(commandInstance, invocationParameters.toArray());
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    System.err.println("An internal error has occurred trying to execute command " + commandName + ".");
-                    System.err.println("Unable to invoke method " + executor.getName() + ".");
-                    System.err.println("Please open an issue on GitHub if you believe this is a problem.");
+                    throw new RuntimeException(String.format("""
+                            An internal error has occurred trying to execute command %s.
+                            Unable to invoke method %s.
+                            Please open an issue on GitHub if you believe this is a problem.""", commandName, executor.getName()));
                 }
             };
 
@@ -182,7 +198,7 @@ public class Cobalt {
                 return;
             }
 
-            CompletableFuture<Void> future = CompletableFuture.runAsync(execute);
+            CompletableFuture.runAsync(execute);
         }
     }
 
