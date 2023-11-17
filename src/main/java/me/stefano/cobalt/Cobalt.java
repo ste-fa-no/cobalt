@@ -90,8 +90,8 @@ public class Cobalt {
      * This method allows the registration of a ParameterAdapter for a given class type.
      * If an adapter for the specified type is already registered, an error message will be printed to the standard error stream, and the registration will be skipped.
      *
-     * @param type    The class type for which the parameter adapter is being registered.
-     * @param adapter The ParameterAdapter implementation for the specified class type.
+     * @param type the class type for which the parameter adapter is being registered.
+     * @param adapter the ParameterAdapter implementation for the specified class type.
      */
     public void registerAdapter(Class<?> type, ParameterAdapter<?> adapter) {
         if (this.adapterMap.containsKey(type)) {
@@ -110,12 +110,12 @@ public class Cobalt {
      *
      * @param command The command to be executed.
      *
-     * @throws UnspecifiedCommandException If the provided command is null or empty.
-     * @throws UnknownCommandException If the specified command is not registered.
-     * @throws NoMatchingExecutorException If no executor method with the correct parameter count is found.
-     * @throws ParameterAdapterNotFoundException If no parameter adapter is found for a specific parameter type.
-     * @throws ExecutionException If an exception occurs during the execution of a command.
-     * @throws InterruptedException If the execution of a command is interrupted.
+     * @throws UnspecifiedCommandException if the provided command is null or empty.
+     * @throws UnknownCommandException if the specified command is not registered.
+     * @throws NoMatchingExecutorException if no executor method with the correct parameter count is found.
+     * @throws ParameterAdapterNotFoundException if no parameter adapter is found for a specific parameter type.
+     * @throws ExecutionException if an exception occurs during the execution of a command.
+     * @throws InterruptedException if the execution of a command is interrupted.
      */
     public void dispatch(String command) throws UnspecifiedCommandException, UnknownCommandException, NoMatchingExecutorException, ParameterAdapterNotFoundException, ExecutionException, InterruptedException {
 

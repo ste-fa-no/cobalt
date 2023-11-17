@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0e122dfc-7dfc-4f4f-96c1-bf890a61d3a8" name="Changes" comment="Update README.md and added (hopefully) helpful javadoc-styled comments">
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/adapter/exception/ParameterAdapterNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/command/exception/NoMatchingExecutorException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/command/exception/UnknownCommandException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/command/exception/UnspecifiedCommandException.java" afterDir="false" />
+    <list default="true" id="0e122dfc-7dfc-4f4f-96c1-bf890a61d3a8" name="Changes" comment="Small fixes. Improved error handling. Better readability. Introduced new exceptions to help with implementation.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/Cobalt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/me/stefano/cobalt/Cobalt.java" afterDir="false" />
     </list>
@@ -103,7 +99,15 @@
       <option name="project" value="LOCAL" />
       <updated>1699850503090</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Small fixes. Improved error handling. Better readability. Introduced new exceptions to help with implementation.">
+      <option name="closed" value="true" />
+      <created>1700199536794</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1700199536794</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -132,7 +136,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit. Documentation still to be done." />
     <MESSAGE value="Update README.md and added (hopefully) helpful javadoc-styled comments" />
-    <option name="LAST_COMMIT_MESSAGE" value="Update README.md and added (hopefully) helpful javadoc-styled comments" />
+    <MESSAGE value="Small fixes. Improved error handling. Better readability. Introduced new exceptions to help with implementation." />
+    <option name="LAST_COMMIT_MESSAGE" value="Small fixes. Improved error handling. Better readability. Introduced new exceptions to help with implementation." />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
