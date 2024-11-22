@@ -26,11 +26,11 @@ You can define commands using annotations.
 
 ```java
 @Command(value = "help", aliases = {"?"}, description = "Prints a list of all registered commands.")
-public class HelpCommand {
+public class HelpCommand extends AbstractCommand {
 
     @CommandExecutor
     public void execute() {
-        for (Map.Entry<String, Object> commandEntry : Cobalt.INSTANCE.commandMap().entrySet()) {
+        for (Map.Entry<String, AbstractCommand> commandEntry : Cobalt.INSTANCE.commandMap().entrySet()) {
             Command annotation = commandEntry.getValue().getClass().getAnnotation(Command.class);
             System.out.println("Command: " + commandEntry.getKey() + "\nDescription: " + annotation.description() + "\n");
         }

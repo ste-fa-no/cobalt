@@ -5,7 +5,7 @@ import me.stefano.cobalt.adapter.exception.ParameterAdapterNotFoundException;
 import me.stefano.cobalt.adapter.impl.*;
 import me.stefano.cobalt.command.Command;
 import me.stefano.cobalt.command.CommandDispatcher;
-import me.stefano.cobalt.command.CommandParser;
+import me.stefano.cobalt.command.AbstractCommand;
 import me.stefano.cobalt.command.exception.NoMatchingExecutorException;
 import me.stefano.cobalt.command.exception.UnknownCommandException;
 import me.stefano.cobalt.command.impl.HelpCommand;
@@ -29,10 +29,9 @@ public enum Cobalt {
      */
     INSTANCE;
 
-    private final Map<String, Object> commandMap;
+    private final Map<String, AbstractCommand> commandMap;
     private final Map<Class<?>, ParameterAdapter<?>> adapterMap;
 
-    private final CommandParser parser;
     private final CommandDispatcher dispatcher;
 
     /**
@@ -43,7 +42,6 @@ public enum Cobalt {
     Cobalt() {
         this.commandMap = new HashMap<>();
         this.adapterMap = new HashMap<>();
-        this.parser = new CommandParser();
         this.dispatcher = new CommandDispatcher();
 
         this.registerAdapter(Boolean.class, new BooleanAdapter());
@@ -62,7 +60,7 @@ public enum Cobalt {
      * @return an unmodifiable map of registered commands, where keys are command names
      *         or aliases and values are the corresponding command objects.
      */
-    public Map<String, Object> commandMap() {
+    public Map<String, AbstractCommand> commandMap() {
         return Map.copyOf(this.commandMap);
     }
 
@@ -77,25 +75,17 @@ public enum Cobalt {
     }
 
     /**
-     * Registers a command object and its executors.
+     * Registers a command in the framework.
      *
-     * @param command the command object annotated with {@link Command}.
-     * @throws IllegalArgumentException if the command class lacks the required annotation
-     *                                  or executors.
+     * The command is associated with its primary name and any aliases defined
+     * in its {@link Command} annotation.
+     *
+     * @param command the {@link AbstractCommand} to register.
      */
-    public void registerCommand(Object command) {
-        Class<?> commandClass = command.getClass();
-
-        if (!parser.hasCommandAnnotation(commandClass)) throw new IllegalArgumentException();
-
-        Command annotation = parser.getCommandAnnotation(commandClass);
-
-        List<Method> executors = parser.getExecutors(commandClass);
-
-        if (executors.isEmpty()) throw new IllegalArgumentException();
-
+    public void registerCommand(AbstractCommand command) {
+        Command annotation = command.getCommandAnnotation();
         this.commandMap.put(annotation.value(), command);
-        List.of(annotation.aliases()).forEach(name -> this.commandMap.put(name, command));
+        List.of(annotation.aliases()).forEach(name -> this.commandMap.putIfAbsent(name, command));
     }
 
     /**
@@ -118,12 +108,10 @@ public enum Cobalt {
      */
     public void dispatch(String command) throws UnknownCommandException, NoMatchingExecutorException, ParameterAdapterNotFoundException {
         String cmd = command.trim();
-
         if (!dispatcher.isValid(cmd)) throw new UnknownCommandException("Unknown command.");
 
-        String commandName = parser.getExecutedCommandName(command);
-        Object commandObject = commandMap.get(commandName);
-
+        String commandName = dispatcher.getExecutedCommandName(command);
+        AbstractCommand commandObject = commandMap.get(commandName);
         if (commandObject == null) throw new UnknownCommandException("Unknown command.");
 
         String arguments = cmd.replace(commandName, "");

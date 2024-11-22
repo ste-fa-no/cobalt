@@ -7,9 +7,7 @@ import me.stefano.cobalt.adapter.exception.ParameterAdapterNotFoundException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -66,8 +64,8 @@ public class CommandDispatcher {
      * @param args    the list of arguments provided to the command.
      * @return a list of matching methods.
      */
-    public List<Method> getAvailableExecutors(Object command, List<String> args) {
-        return Arrays.stream(command.getClass().getDeclaredMethods()).filter(method -> method.getParameterCount() == args.size()).toList();
+    public List<Method> getAvailableExecutors(AbstractCommand command, List<String> args) {
+        return command.getExecutors().stream().filter(method -> method.getParameterCount() == args.size()).toList();
     }
 
     /**
@@ -108,6 +106,19 @@ public class CommandDispatcher {
     }
 
     /**
+     * Extracts the name of the command being executed from a command string.
+     * <p>
+     * The method identifies the command name based on the registered commands in {@link Cobalt#commandMap()}.
+     *
+     * @param command the input command string.
+     * @return the name of the command being executed, trimmed of extra whitespace.
+     * @throws NoSuchElementException if no matching command name is found.
+     */
+    public String getExecutedCommandName(String command) {
+        return Cobalt.INSTANCE.commandMap().keySet().stream().filter((command + " ")::startsWith).sorted(Comparator.comparingInt(o -> o.length() * -1)).toList().getFirst().trim();
+    }
+
+    /**
      * Checks whether the given method should be executed asynchronously.
      *
      * @param executor the method to check.
@@ -127,7 +138,7 @@ public class CommandDispatcher {
      * @param executor      the method to execute.
      * @param parameterList the list of parameters to pass to the method.
      */
-    public void execute(Object commandObject, Method executor, List<Object> parameterList) {
+    public void execute(AbstractCommand commandObject, Method executor, List<Object> parameterList) {
         Runnable execute = () -> {
             try {
                 executor.invoke(commandObject, parameterList.toArray());
