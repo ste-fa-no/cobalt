@@ -25,12 +25,15 @@ cobalt uses the singleton design pattern, as having multiple istances of the lib
 You can define commands using annotations.
 
 ```java
-@Command(value = "sum", aliases = {"add"})
-public class SumCommand {
+@Command(value = "help", aliases = {"?"}, description = "Prints a list of all registered commands.")
+public class HelpCommand {
 
-    @CommandExecutor(async = false)
-    public void execute(Integer num1, Integer num2) {
-        System.out.println(num1 + num2);
+    @CommandExecutor
+    public void execute() {
+        for (Map.Entry<String, Object> commandEntry : Cobalt.INSTANCE.commandMap().entrySet()) {
+            Command annotation = commandEntry.getValue().getClass().getAnnotation(Command.class);
+            System.out.println("Command: " + commandEntry.getKey() + "\nDescription: " + annotation.description() + "\n");
+        }
     }
 
 }
@@ -39,10 +42,13 @@ public class SumCommand {
 In order to be used, commands need to be registered calling the ```registerCommand()``` method.
 
 ```java
+import me.stefano.cobalt.command.impl.HelpCommand;
+
 public class Main {
-    
+
     public static void main(String[] args) {
-        Cobalt.get().registerCommand(new SumCommand());
+        // NB: you don't actually need to register HelpCommand specifically as Cobalt does it on its own!
+        Cobalt.INSTANCE.registerCommand(new HelpCommand());
     }
 
 }
@@ -71,12 +77,13 @@ public class BooleanAdapter implements ParameterAdapter<Boolean> {
 Commands can be executed using the ```dispatch()``` method.
 
 ```java
+import me.stefano.cobalt.Cobalt;
+
 public class Main {
 
     public static void main(String[] args) {
-        Cobalt.get().registerCommand(new SumCommand());
-
-        Cobalt.get().dispatch("sum 15 18");
+        Cobalt.INSTANCE.dispatch("help");
+        Cobalt.INSTANCE.dispatch("?");
     }
 
 }
@@ -84,7 +91,11 @@ public class Main {
 The output should be something like this:
 
 ```
-33
+Command: help
+Description: Prints a list of all registered commands.
+
+Command: ?
+Description: Prints a list of all registered commands.
 
 
 Process finished with exit code 0
