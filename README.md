@@ -42,8 +42,6 @@ public class HelpCommand {
 In order to be used, commands need to be registered calling the ```registerCommand()``` method.
 
 ```java
-import me.stefano.cobalt.command.impl.HelpCommand;
-
 public class Main {
 
     public static void main(String[] args) {
@@ -77,8 +75,6 @@ public class BooleanAdapter implements ParameterAdapter<Boolean> {
 Commands can be executed using the ```dispatch()``` method.
 
 ```java
-import me.stefano.cobalt.Cobalt;
-
 public class Main {
 
     public static void main(String[] args) {
