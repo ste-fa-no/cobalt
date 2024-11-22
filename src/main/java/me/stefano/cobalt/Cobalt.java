@@ -1,37 +1,49 @@
 package me.stefano.cobalt;
 
+import me.stefano.cobalt.adapter.ParameterAdapter;
 import me.stefano.cobalt.adapter.exception.ParameterAdapterNotFoundException;
 import me.stefano.cobalt.adapter.impl.*;
 import me.stefano.cobalt.command.Command;
-import me.stefano.cobalt.command.CommandExecutor;
-import me.stefano.cobalt.adapter.ParameterAdapter;
+import me.stefano.cobalt.command.CommandDispatcher;
+import me.stefano.cobalt.command.CommandParser;
 import me.stefano.cobalt.command.exception.NoMatchingExecutorException;
 import me.stefano.cobalt.command.exception.UnknownCommandException;
-import me.stefano.cobalt.command.exception.UnspecifiedCommandException;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * The {@code Cobalt} class represents a command handling framework for a command-line application.
- * It provides functionality for registering commands, executing commands, and managing parameter adapters.
+ * Singleton enum that serves as the core manager for the command framework.
+ * <p>
+ * The {@code Cobalt} class provides methods to register commands, manage parameter adapters,
+ * and dispatch commands dynamically. It uses a parser and dispatcher internally to interpret
+ * and execute commands based on user input.
  */
-public class Cobalt {
+public enum Cobalt {
 
-    private static Cobalt instance = null;
+    /**
+     * Singleton instance of the Cobalt class.
+     */
+    INSTANCE;
 
     private final Map<String, Object> commandMap;
     private final Map<Class<?>, ParameterAdapter<?>> adapterMap;
 
+    private final CommandParser parser;
+    private final CommandDispatcher dispatcher;
+
     /**
-     * Constructs a new instance of the {@code Cobalt} class.
-     * Initializes the command map and adapter map with default adapters for common types.
+     * Private constructor for the singleton instance. Initializes the command map,
+     * adapter map, parser, and dispatcher. Additionally, registers default parameter
+     * adapters for common data types.
      */
-    private Cobalt() {
+    Cobalt() {
         this.commandMap = new HashMap<>();
         this.adapterMap = new HashMap<>();
+        this.parser = new CommandParser();
+        this.dispatcher = new CommandDispatcher();
 
         this.registerAdapter(Boolean.class, new BooleanAdapter());
         this.registerAdapter(Character.class, new CharacterAdapter());
@@ -42,164 +54,88 @@ public class Cobalt {
     }
 
     /**
-     * Gets the singleton instance of the {@code Cobalt} class.
+     * Retrieves an immutable view of the current command map.
      *
-     * @return the singleton instance of the {@code Cobalt} class
+     * @return an unmodifiable map of registered commands, where keys are command names
+     *         or aliases and values are the corresponding command objects.
      */
-    public static Cobalt get() {
-        if (instance == null) instance = new Cobalt();
-        return instance;
+    public Map<String, Object> commandMap() {
+        return Map.copyOf(this.commandMap);
     }
 
     /**
-     * Adds a new object to the command map for handling commands.
-     * <p>
-     * A new entry is added to the command map only if the specified object's class is annotated with a valid {@link me.stefano.cobalt.command.Command} annotation and contains at least one method annotated with {@link me.stefano.cobalt.command.CommandExecutor}.
-     * If the class lacks these annotations, an error message is printed to the console, and the registration process is aborted.
+     * Retrieves an immutable view of the current parameter adapter map.
      *
-     * @param command instance of a class where executors for a new command are defined
+     * @return an unmodifiable map of registered parameter adapters, where keys are
+     *         parameter types and values are the corresponding adapters.
+     */
+    public Map<Class<?>, ParameterAdapter<?>> adapterMap() {
+        return Map.copyOf(this.adapterMap);
+    }
+
+    /**
+     * Registers a command object and its executors.
+     *
+     * @param command the command object annotated with {@link Command}.
+     * @throws IllegalArgumentException if the command class lacks the required annotation
+     *                                  or executors.
      */
     public void registerCommand(Object command) {
-        var commandClass = command.getClass();
+        Class<?> commandClass = command.getClass();
 
-        if (!commandClass.isAnnotationPresent(Command.class)) {
-            System.err.println("An error has occurred registering command " + commandClass.getName() + ".");
-            System.err.println("Please ensure that " + commandClass.getName() + " is annotated with @Command.");
-            System.err.println("See the documentation for more information.");
-            return;
-        }
-        var commandAnnotation = commandClass.getAnnotation(Command.class);
+        if (!parser.hasCommandAnnotation(commandClass)) throw new IllegalArgumentException();
 
-        var commandClassMethodsStream = Arrays.stream(commandClass.getDeclaredMethods());
-        var commandExecutorMethods = commandClassMethodsStream.filter(method -> method.isAnnotationPresent(CommandExecutor.class));
+        Command annotation = parser.getCommandAnnotation(commandClass);
 
-        if (commandExecutorMethods.findAny().isEmpty()) {
-            System.err.println("An error has occurred registering command " + commandClass.getName() + ".");
-            System.err.println("Please ensure that " + commandClass.getName() + " has at least one method annotated with @CommandExecutor.");
-            System.err.println("See the documentation for more information.");
-            return;
-        }
+        List<Method> executors = parser.getExecutors(commandClass);
 
-        this.commandMap.put(commandAnnotation.value(), command);
-        List.of(commandAnnotation.aliases()).forEach(name -> this.commandMap.put(name, command));
+        if (executors.isEmpty()) throw new IllegalArgumentException();
+
+        this.commandMap.put(annotation.value(), command);
+        List.of(annotation.aliases()).forEach(name -> this.commandMap.put(name, command));
     }
 
     /**
-     * Registers a custom parameter adapter for a specific class type.
-     * <p>
-     * This method allows the registration of a ParameterAdapter for a given class type.
-     * If an adapter for the specified type is already registered, an error message will be printed to the standard error stream, and the registration will be skipped.
+     * Registers a parameter adapter for a specific type.
      *
-     * @param type the class type for which the parameter adapter is being registered.
-     * @param adapter the ParameterAdapter implementation for the specified class type.
+     * @param type    the parameter type for which the adapter will be registered.
+     * @param adapter the adapter implementation.
      */
     public void registerAdapter(Class<?> type, ParameterAdapter<?> adapter) {
-        if (this.adapterMap.containsKey(type)) {
-            System.err.println("An error has occurred registering parameter adapter for class " + type.getName() + ".");
-            System.err.println("An adapter for this type is already registered.");
-            System.err.println("See the documentation for more information.");
-            return;
-        }
-
-        this.adapterMap.put(type, adapter);
+        this.adapterMap.putIfAbsent(type, adapter);
     }
 
     /**
-     * The `dispatch` method is responsible for executing a specified command by identifying the appropriate command executor and invoking the corresponding method.
-     * This method handles command parsing, executor selection, and parameter adaptation.
+     * Dispatches a command string to be executed.
      *
-     * @param command The command to be executed.
-     *
-     * @throws UnspecifiedCommandException if the provided command is null or empty.
-     * @throws UnknownCommandException if the specified command is not registered.
-     * @throws NoMatchingExecutorException if no executor method with the correct parameter count is found.
-     * @throws ParameterAdapterNotFoundException if no parameter adapter is found for a specific parameter type.
-     * @throws ExecutionException if an exception occurs during the execution of a command.
-     * @throws InterruptedException if the execution of a command is interrupted.
+     * @param command the input string representing the command and its arguments.
+     * @throws UnknownCommandException          if the command is not recognized.
+     * @throws NoMatchingExecutorException      if no suitable executor is found for the command.
+     * @throws ParameterAdapterNotFoundException if required parameter adapters are not available.
      */
-    public void dispatch(String command) throws UnspecifiedCommandException, UnknownCommandException, NoMatchingExecutorException, ParameterAdapterNotFoundException, ExecutionException, InterruptedException {
+    public void dispatch(String command) throws UnknownCommandException, NoMatchingExecutorException, ParameterAdapterNotFoundException {
+        String cmd = command.trim();
 
-        if (command == null || command.isEmpty()) {
-            throw new UnspecifiedCommandException("""
-                    A syntax error has occurred trying to execute command.
-                    Please specify a command to execute!""");
+        if (!dispatcher.isValid(cmd)) throw new UnknownCommandException("Unknown command.");
+
+        String commandName = parser.getExecutedCommandName(command);
+        Object commandObject = commandMap.get(commandName);
+
+        if (commandObject == null) throw new UnknownCommandException("Unknown command.");
+
+        String arguments = cmd.replace(commandName, "");
+        List<String> args = dispatcher.getSplitArguments(arguments);
+
+        List<Method> executors = dispatcher.getAvailableExecutors(commandObject, args);
+        if (executors.isEmpty()) throw new NoMatchingExecutorException();
+
+        for (Method executor : executors) {
+            List<Object> parameterList = dispatcher.getInvocationParameters(executor, args);
+            if (parameterList.size() != executor.getParameterCount()) continue;
+
+            dispatcher.execute(commandObject, executor, parameterList);
         }
 
-        var splitCommand = new ArrayList<>(List.of(command.split(" ")));
-        var commandName = splitCommand.get(0);
-        splitCommand.remove(0);
-
-        if (!this.commandMap.containsKey(commandName)) {
-            throw new UnknownCommandException(String.format("""
-                    A syntax error has occurred trying to execute command %s.
-                    No command with name %s has ever been registered.""", commandName, commandName));
-        }
-        var commandParameterCount = splitCommand.size();
-
-        var commandInstance = this.commandMap.get(commandName);
-        var instanceMethods = Arrays.stream(commandInstance.getClass().getDeclaredMethods());
-        var executorMethods = instanceMethods.filter(method -> method.isAnnotationPresent(CommandExecutor.class));
-
-        var availableExecutors = executorMethods.filter(method -> method.getParameterCount() == commandParameterCount);
-        var executorList = availableExecutors.toList();
-
-        if (executorList.isEmpty()) {
-            throw new NoMatchingExecutorException(String.format("""
-                    A syntax error has occurred trying to execute command %s.
-                    No executor method with %d parameters found for command %s.""", commandName, commandParameterCount, commandName));
-        }
-
-        for (var executor : executorList) {
-            var executorParameters = executor.getParameters();
-            var parameterList = new ArrayList<>(List.of(executorParameters));
-            var invocationParameters = new ArrayList<>();
-
-            for (var parameter : parameterList) {
-                var parameterType = parameter.getType();
-                var typeName = parameterType.getName();
-                var parameterAdapter = this.adapterMap.get(parameterType);
-
-                if (parameterAdapter == null) {
-                    throw new ParameterAdapterNotFoundException(String.format("""
-                            An internal error has occurred trying to execute command %s.
-                            No parameter adapter found for type %s.
-                            See the documentation for further information on how to create parameter type adapters.""", commandName, typeName));
-                }
-
-                var parameterIndex = parameterList.indexOf(parameter);
-                var currentParameter = splitCommand.get(parameterIndex);
-                Object parameterValue = null;
-
-                try {
-                    parameterValue = parameterAdapter.from(currentParameter);
-                } catch (Exception e) {
-                    parameterValue = parameterAdapter.fallback(currentParameter, e);
-                } finally {
-                    invocationParameters.add(parameterValue);
-                }
-
-            }
-
-            var executorAnnotation = executor.getAnnotation(CommandExecutor.class);
-
-            Runnable execute = () -> {
-                try {
-                    executor.invoke(commandInstance, invocationParameters.toArray());
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    throw new RuntimeException(String.format("""
-                            An internal error has occurred trying to execute command %s.
-                            Unable to invoke method %s.
-                            Please open an issue on GitHub if you believe this is a problem.""", commandName, executor.getName()));
-                }
-            };
-
-            if (!executorAnnotation.async()) {
-                execute.run();
-                return;
-            }
-
-            CompletableFuture.runAsync(execute);
-        }
     }
 
 }
