@@ -8,6 +8,7 @@ import me.stefano.cobalt.command.CommandDispatcher;
 import me.stefano.cobalt.command.CommandParser;
 import me.stefano.cobalt.command.exception.NoMatchingExecutorException;
 import me.stefano.cobalt.command.exception.UnknownCommandException;
+import me.stefano.cobalt.command.impl.HelpCommand;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -51,6 +52,8 @@ public enum Cobalt {
         this.registerAdapter(Float.class, new FloatAdapter());
         this.registerAdapter(Integer.class, new IntegerAdapter());
         this.registerAdapter(String.class, new StringAdapter());
+
+        this.registerCommand(new HelpCommand());
     }
 
     /**
