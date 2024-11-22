@@ -1,6 +1,6 @@
 # cobalt
 
-This repository aims to simplify handling string-based commands while being as platform-agnostic as possible.
+This repository focuses on streamlining the management of string-based commands, with an emphasis on maintaining platform independence.
 
 ## Installation
 
