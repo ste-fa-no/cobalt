@@ -28,8 +28,8 @@ public class HelpCommand extends AbstractCommand {
 
     @CommandExecutor
     public void execute() {
-        for (Map.Entry<String, AbstractCommand> commandEntry : Cobalt.INSTANCE.commandMap().entrySet()) {
-            Command annotation = commandEntry.getValue().getClass().getAnnotation(Command.class);
+        for (var commandEntry : Cobalt.INSTANCE.commandMap().entrySet()) {
+            Command annotation = commandEntry.getValue().getCommandAnnotation();
             System.out.println("Command: " + commandEntry.getKey() + "\nDescription: " + annotation.description() + "\n");
         }
     }
