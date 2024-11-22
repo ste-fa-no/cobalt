@@ -20,8 +20,6 @@ Add cobalt as a dependency to your project.
 
 ## Usage
 
-cobalt uses the singleton design pattern, as having multiple istances of the library is useless. 
-
 You can define commands using annotations.
 
 ```java
@@ -39,7 +37,7 @@ public class HelpCommand extends AbstractCommand {
 }
 ```
 
-In order to be used, commands need to be registered calling the ```registerCommand()``` method.
+Commands need to be registered calling the ```registerCommand()``` method.
 
 ```java
 public class Main {
